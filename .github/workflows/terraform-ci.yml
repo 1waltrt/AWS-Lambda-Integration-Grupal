@@ -1,0 +1,68 @@
+name: terraform-ci
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  id-token: write # solo se usa si configuras AWS_ROLE_ARN (OIDC) para el plan
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+      - run: terraform fmt -check -recursive -diff
+
+  validate:
+    name: validate (${{ matrix.env }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, qa, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+      - name: init (sin backend)
+        working-directory: envs/${{ matrix.env }}
+        run: terraform init -backend=false -input=false
+      - name: validate
+        working-directory: envs/${{ matrix.env }}
+        run: terraform validate
+
+  # El plan necesita credenciales AWS. Es opcional: se activa al crear las
+  # variables del repo AWS_ROLE_ARN (rol OIDC) y TF_STATE_BUCKET.
+  plan:
+    name: plan
+    needs: [fmt, validate]
+    if: ${{ vars.AWS_ROLE_ARN != '' && vars.TF_STATE_BUCKET != '' }}
+    runs-on: ubuntu-latest
+    env:
+      TF_ENV: ${{ github.base_ref == 'main' && 'prod' || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: ./scripts/build-lambdas.sh
+      - name: init
+        working-directory: envs/${{ env.TF_ENV }}
+        run: terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+      - name: plan
+        working-directory: envs/${{ env.TF_ENV }}
+        run: terraform plan -input=false -var-file=${{ env.TF_ENV }}.tfvars
