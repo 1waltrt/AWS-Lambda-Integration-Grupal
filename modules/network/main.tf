@@ -108,7 +108,7 @@ resource "aws_route_table_association" "private" {
 
 # ── Security groups ──────────────────────────────────────────────────────────
 resource "aws_security_group" "upload_lambda" {
-  name        = "sg-upload-lambda-${local.name}"
+  name        = "upload-lambda-sg-${local.name}"
   description = "upload-lambda: sin inbound, egress 443 a S3 y SQS endpoints"
   vpc_id      = aws_vpc.this.id
 
@@ -116,7 +116,7 @@ resource "aws_security_group" "upload_lambda" {
 }
 
 resource "aws_security_group" "crop_lambda" {
-  name        = "sg-crop-lambda-${local.name}"
+  name        = "crop-lambda-sg-${local.name}"
   description = "crop-lambda: sin inbound, egress 443 a S3 y SQS endpoints"
   vpc_id      = aws_vpc.this.id
 
@@ -124,7 +124,7 @@ resource "aws_security_group" "crop_lambda" {
 }
 
 resource "aws_security_group" "vpce_sqs" {
-  name        = "sg-vpce-sqs-${local.name}"
+  name        = "vpce-sqs-sg-${local.name}"
   description = "Interface endpoint de SQS: 443 desde las Lambdas"
   vpc_id      = aws_vpc.this.id
 
