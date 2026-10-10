@@ -1,0 +1,12 @@
+{
+  "name": "crop-lambda",
+  "version": "1.0.0",
+  "description": "Lee mensajes SQS (eventos S3), recorta la imagen a un círculo de 40x40 y la guarda en processed/",
+  "main": "index.js",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "sharp": "^0.33.5"
+  }
+}
